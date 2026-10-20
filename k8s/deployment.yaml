@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: lab-inventario:latest   # cambiar por tu registro: registro.ejemplo.com/lab-inventario:1.0
+          image: rperdomo4/lab-inventario:1.0   # Docker Hub; construida para linux/amd64
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000

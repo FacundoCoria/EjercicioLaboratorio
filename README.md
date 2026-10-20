@@ -35,3 +35,13 @@ Los manifiestos están en `k8s/`. El secreto real no se versiona: `k8s/secret.ya
 El archivo `team4.kubeconfig` es una credencial: guardarlo FUERA del repo (por ejemplo `~/.kube/`)
 y usarlo con `export KUBECONFIG=~/.kube/team4.kubeconfig`. Está ignorado por git y por Docker
 (`*.kubeconfig`), pero no lo copies a esta carpeta de todos modos.
+
+## Abrir la app que corre en el cluster
+Requisitos: `kubectl` instalado y tu `team1.kubeconfig` (credencial: no va al repo, ya está en `.gitignore`).
+
+    ./scripts/abrir-app.sh                    # busca ./team1.kubeconfig o ~/.kube/team1.kubeconfig
+    ./scripts/abrir-app.sh ruta/al/team1.kubeconfig
+
+Luego abrir http://localhost:8080 (usuarios de prueba en la sección de arriba).
+Variables opcionales: `PORT` (8080), `NAMESPACE` (el del kubeconfig).
+Mantener la terminal abierta mientras se usa la app.
