@@ -46,8 +46,8 @@ pipeline {
           rm -rf out && mkdir out && cp k8s/app/*.yaml out/
           sed -i "s|lab-back:.*|lab-back:${TAG}|; s|lab-front:.*|lab-front:${TAG}|" out/*.yaml
           kubectl apply -n "$NAMESPACE" -f out/
-          kubectl rollout status deployment/back  -n "$NAMESPACE" --timeout=180s
-          kubectl rollout status deployment/front -n "$NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/back  -n "$NAMESPACE" --timeout=300s
+          kubectl rollout status deployment/front -n "$NAMESPACE" --timeout=300s
         '''
       }
     }

@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: lab-inventario
 spec:
+  ingressClassName: apisix
   rules:
     - host: equipo1.reto-ucu.net
       http:

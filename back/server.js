@@ -122,5 +122,7 @@ app.get('/avisos', auth, (req, res) => {
 export default app;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  app.listen(PORT, () => console.log(`Inventario (API) escuchando en :${PORT}`));
+  const server = app.listen(PORT, () => console.log(`Inventario (API) escuchando en :${PORT}`));
+  // Cierre rápido cuando Kubernetes detiene el pod (SIGTERM)
+  for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => server.close(() => process.exit(0)));
 }
