@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventario del laboratorio</title>
+<style>
+  :root { --bg:#f6f6f4; --card:#fff; --txt:#1c1c1a; --mut:#6b6b66; --bd:#dcdcd6; --acc:#1f6feb; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--txt); }
+  main { max-width:900px; margin:0 auto; padding:16px; }
+  header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+  h1 { font-size:20px; margin:0; }
+  input, select, button { font:inherit; padding:6px 10px; border:1px solid var(--bd); border-radius:6px; background:var(--card); color:var(--txt); }
+  button { cursor:pointer; } button:hover { border-color:var(--acc); }
+  button.p { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  #q { flex:1; min-width:200px; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:12px; margin:8px 0; }
+  .eq { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; }
+  .mut { color:var(--mut); font-size:13px; }
+  .tag { padding:2px 8px; border-radius:99px; font-size:12px; color:#fff; }
+  .disponible{background:#2da44e} .en_uso{background:#cf222e} .reservado{background:#bf8700} .en_reparacion{background:#6e7781}
+  .aviso { background:#fff8c5; border-color:#d4a72c; }
+  .err { color:#cf222e; min-height:20px; }
+  .mapa { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; }
+  .zona { border:1px dashed var(--bd); border-radius:8px; padding:8px; background:var(--card); }
+  .zona b { font-size:13px; } .chip { display:block; margin-top:4px; padding:3px 8px; border-radius:6px; color:#fff; font-size:12px; }
+  .hide { display:none; } h2 { font-size:16px; margin:20px 0 4px; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161614; --card:#212120; --txt:#ececea; --mut:#9a9a94; --bd:#3a3a37; } .aviso{background:#3a3200} }
+</style>
+</head>
+<body>
+<main>
+  <section id="login" class="card hide">
+    <h1>Inventario del laboratorio</h1>
+    <form id="f-login" class="row" style="margin-top:12px">
+      <input id="l-nombre" placeholder="Usuario" autocomplete="username" required>
+      <input id="l-pass" type="password" placeholder="Contraseña" autocomplete="current-password" required>
+      <button class="p">Entrar</button>
+    </form>
+    <div id="l-err" class="err"></div>
+  </section>
+
+  <section id="app" class="hide">
+    <header>
+      <h1>Inventario del laboratorio</h1>
+      <div class="row"><span id="quien" class="mut"></span><button id="salir">Salir</button></div>
+    </header>
+    <div id="avisos"></div>
+    <div class="row"><input id="q" type="search" placeholder="Buscar por nombre, tipo o ubicación"></div>
+    <div id="err" class="err"></div>
+    <div id="lista"></div>
+
+    <h2>Mapa del laboratorio</h2>
+    <div id="mapa" class="mapa"></div>
+
+    <section id="admin" class="card hide" style="margin-top:20px">
+      <b>Dar de alta un equipo</b>
+      <form id="f-alta" class="row" style="margin-top:8px">
+        <input id="a-nombre" placeholder="Nombre" required>
+        <input id="a-tipo" placeholder="Tipo" required>
+        <input id="a-ubic" placeholder="Ubicación" required>
+        <button class="p">Agregar</button>
+      </form>
+    </section>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
