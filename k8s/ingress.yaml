@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lab-inventario
+spec:
+  rules:
+    - host: inventario.ejemplo.com   # cambiar por tu dominio
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: lab-inventario
+                port: { number: 80 }

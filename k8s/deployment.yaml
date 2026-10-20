@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-inventario
+spec:
+  replicas: 1            # SQLite: una sola réplica
+  strategy:
+    type: Recreate       # nunca dos pods sobre el mismo archivo
+  selector:
+    matchLabels: { app: lab-inventario }
+  template:
+    metadata:
+      labels: { app: lab-inventario }
+    spec:
+      containers:
+        - name: app
+          image: lab-inventario:latest   # cambiar por tu registro: registro.ejemplo.com/lab-inventario:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - { name: PORT, value: "3000" }
+            - { name: DB_PATH, value: /data/lab.db }
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: lab-inventario, key: JWT_SECRET }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /health, port: 3000 }
+            initialDelaySeconds: 3
+          livenessProbe:
+            httpGet: { path: /health, port: 3000 }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: lab-inventario-data }
