@@ -18,3 +18,4 @@ secrets/
 k8s/secret.yaml
 
 .DS_Store
+k8s/jenkins-secrets.yaml

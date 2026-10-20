@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: back          # nginx (front) lo resuelve como http://back:3000
+spec:
+  selector: { app: back }
+  ports:
+    - { port: 3000, targetPort: 3000 }

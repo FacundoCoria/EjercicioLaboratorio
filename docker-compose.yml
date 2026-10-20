@@ -1,11 +1,14 @@
 services:
-  app:
-    build: .
-    ports: ["3000:3000"]
+  back:
+    build: ./back
     environment:
       DB_PATH: /data/lab.db
       JWT_SECRET: ${JWT_SECRET:-cambiar-en-produccion}
     volumes:
       - labdata:/data
+  front:
+    build: ./front
+    ports: ["3000:80"]
+    depends_on: [back]
 volumes:
   labdata:

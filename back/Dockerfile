@@ -2,7 +2,7 @@ FROM node:24-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
-COPY . .
+COPY server.js db.js ./
 ENV PORT=3000 DB_PATH=/data/lab.db
 VOLUME /data
 EXPOSE 3000

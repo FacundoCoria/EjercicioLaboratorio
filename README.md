@@ -7,7 +7,7 @@ Aplicación para saber qué equipos hay en el laboratorio, dónde están, si alg
 - **Equipos** con nombre, tipo, ubicación y estado: `disponible`, `en uso`, `reservado`, `en reparación`.
 - **Buscador** por nombre, tipo o ubicación.
 - **Tomar y devolver** un equipo, **reservarlo para una fecha** e **historial** de quién lo usó.
-- **Mapa del laboratorio** (equipos agrupados por ubicación, coloreados por estado) y **aviso de reservas vencidas**.
+- **Mapa del laboratorio** y **aviso de reservas vencidas**.
 
 ### Reglas
 - Un equipo en uso o en reparación no se puede reservar.
@@ -17,19 +17,27 @@ Aplicación para saber qué equipos hay en el laboratorio, dónde están, si alg
 - Dar de alta equipos y cambiar su estado es exclusivo del encargado.
 
 ## Arquitectura
-Un único servicio: **Node + Express** (API REST + frontend estático) y **SQLite** (`node:sqlite`, requiere Node 24+).
-Autenticación con **JWT en cookie** (sin estado en el servidor).
+Tres piezas, cada una en su propio pod:
+
+    navegador ──► front (nginx) ──► back (Node + Express + SQLite)
+                   archivos          API REST, JWT en cookie,
+                   estáticos         base en un volumen (PVC)
+
+    jenkins (+ docker-in-docker) ──► prueba, construye, sube a Docker Hub y despliega
 
     .
-    ├── server.js            # rutas, autenticación y reglas de negocio
-    ├── db.js                # todo el acceso a datos (tablas, semilla, consultas)
-    ├── public/              # frontend (index.html + app.js)
-    ├── Dockerfile
-    ├── docker-compose.yml
-    ├── k8s/                 # manifiestos de Kubernetes
-    └── scripts/abrir-app.sh # abre la app del cluster con port-forward
+    ├── back/        # API: server.js, db.js, pruebas (test/), Dockerfile
+    ├── front/       # index.html, app.js, nginx.conf, Dockerfile
+    ├── jenkins/     # imagen de Jenkins (Dockerfile + plugins.txt)
+    ├── k8s/
+    │   ├── app/     # front, back, volumen e ingress
+    │   └── jenkins/ # Jenkins, su volumen y su configuración
+    ├── scripts/     # abrir-app.sh, abrir-jenkins.sh
+    ├── Jenkinsfile  # pipeline
+    └── docker-compose.yml
 
-Tablas: `usuarios`, `equipos` y `movimientos` (los usos y las reservas, que forman el historial).
+El front sirve la página y reenvía a `http://back:3000` las rutas de la API (`/login`, `/logout`, `/me`, `/equipos`, `/avisos`, `/health`).
+La base es SQLite (`node:sqlite`, Node 24+), por eso el back es de **una sola réplica**.
 
 ### API
 | Método | Ruta | Quién |
@@ -44,54 +52,74 @@ Tablas: `usuarios`, `equipos` y `movimientos` (los usos y las reservas, que form
 | GET | `/health` | público |
 
 ## Correr en local
-    npm install
-    npm start          # http://localhost:3000
+Con Docker (front + back):
 
-## Correr con Docker
-    docker compose up --build
+    docker compose up --build        # http://localhost:3000
 
-Los datos viven en el volumen `labdata` (`/data/lab.db`) y se conservan al recrear el contenedor.
-`docker compose down -v` borra el volumen y los datos.
+Solo el back, sin Docker:
 
-### Variables de entorno
+    cd back && npm ci && npm start   # API en http://localhost:3000
+    npm test                         # 3 pruebas de las reglas principales
+
+Los datos viven en el volumen `labdata`. `docker compose down -v` los borra.
+
+### Variables de entorno (back)
 | Variable | Por defecto | Uso |
 |---|---|---|
-| `PORT` | `3000` | puerto del servidor |
-| `DB_PATH` | `./lab.db` | ruta del archivo SQLite |
+| `PORT` | `3000` | puerto |
+| `DB_PATH` | `./lab.db` | archivo SQLite |
 | `JWT_SECRET` | secreto de desarrollo | cambiar siempre en producción |
 
 ### Usuarios de prueba (semilla)
 `ana` / `ana123` y `luis` / `luis123` (usuario); `encargado` / `admin123` (encargado).
 Cambiarlos o borrarlos antes de exponer la app fuera de una demo.
 
-## Kubernetes
-Manifiestos en `k8s/`:
-
+## Kubernetes (namespace `alumno-team1`)
 | Archivo | Qué hace |
 |---|---|
-| `deployment.yaml` | la app (1 réplica, estrategia `Recreate`, probes en `/health`) |
-| `pvc.yaml` | volumen persistente de 1 Gi montado en `/data` |
-| `service.yaml` | Service `ClusterIP` en el puerto 80 |
-| `ingress.yaml` | entrada por dominio (`mi-app.reto-ucu.net`) |
-| `secret.yaml.example` | plantilla del secreto (el real no se versiona) |
+| `k8s/app/back-deployment.yaml`, `back-service.yaml`, `back-pvc.yaml` | API; volumen de 1 Gi en `/data` (`Recreate`, 1 réplica) |
+| `k8s/app/front-deployment.yaml`, `front-service.yaml` | nginx con la página |
+| `k8s/app/ingress.yaml` | entrada por dominio (`equipo1.reto-ucu.net`) hacia el front |
+| `k8s/jenkins/*` | Jenkins con un contenedor docker-in-docker, volumen de 2 Gi y su configuración |
+| `k8s/secret.yaml.example`, `k8s/jenkins-secrets.yaml.example` | plantillas de secretos (los reales no se versionan) |
 
-La imagen está en Docker Hub: `rperdomo4/lab-inventario:1.0`, construida para `linux/amd64` (la arquitectura de los nodos).
-Para reconstruirla y subirla:
-
-    docker buildx build --platform linux/amd64 -t rperdomo4/lab-inventario:1.0 --push .
-
-### Desplegar
-    export KUBECONFIG=ruta/al/team1.kubeconfig
-    kubectl create secret generic lab-inventario -n alumno-team1 \
-      --from-literal=JWT_SECRET=$(openssl rand -hex 32)
-    kubectl apply -n alumno-team1 -f k8s/pvc.yaml -f k8s/deployment.yaml -f k8s/service.yaml
-    kubectl rollout status deploy/lab-inventario -n alumno-team1
+Imágenes en Docker Hub (`linux/amd64`, la arquitectura de los nodos): `rperdomo4/lab-back`, `rperdomo4/lab-front`, `rperdomo4/lab-jenkins`.
 
 ### Persistencia
-La base SQLite vive en un PVC (`local-path`). Sobrevive a reiniciar o borrar el pod y a actualizar la imagen.
-Se pierde si se borra el PVC o el namespace, o si cae el nodo donde está el volumen (el almacenamiento es local al nodo).
-Como SQLite no admite varias réplicas escribiendo el mismo archivo, el deployment usa `replicas: 1` y `Recreate`.
-Para varias réplicas habría que migrar `db.js` a Postgres.
+La base está en un PVC (`local-path`). Sobrevive a reiniciar o borrar el pod y a actualizar la imagen.
+Se pierde si se borra el PVC o el namespace, o si cae el nodo (el almacenamiento es local al nodo).
+Para varias réplicas del back habría que migrar `back/db.js` a Postgres.
+
+### Puesta en marcha de Jenkins (una sola vez)
+Requiere `kubectl`, tu `team1.kubeconfig` y una sesión de `docker login`.
+
+    # 1. Imagen de Jenkins
+    docker buildx build --platform linux/amd64 -t rperdomo4/lab-jenkins:1.0 --push ./jenkins
+
+    # 2. Secretos (el token de Docker Hub se crea en hub.docker.com con permiso Read & Write)
+    export KUBECONFIG=ruta/al/team1.kubeconfig
+    kubectl create secret generic lab-inventario -n alumno-team1 \
+      --from-literal=JWT_SECRET=$(openssl rand -hex 32)          # omitir si ya existe
+    kubectl create secret generic jenkins-secrets -n alumno-team1 \
+      --from-literal=JENKINS_ADMIN_USER=admin \
+      --from-literal=JENKINS_ADMIN_PASSWORD='<clave>' \
+      --from-literal=DOCKERHUB_USER=rperdomo4 \
+      --from-literal=DOCKERHUB_TOKEN='<token>'
+
+    # 3. Desplegar Jenkins
+    kubectl apply -n alumno-team1 -f k8s/jenkins/
+
+    # 4. Abrirlo en http://localhost:8081
+    ./scripts/abrir-jenkins.sh
+
+### Pipeline (`Jenkinsfile`)
+Jenkins revisa el repo (rama `main`) cada pocos minutos y ejecuta:
+1. **Tests del back** (`npm ci` y `npm test`).
+2. **Construir** las imágenes `lab-back` y `lab-front`, etiquetadas con el número de build y `latest`.
+3. **Subir** las imágenes a Docker Hub.
+4. **Desplegar:** aplica `k8s/app/` con el tag nuevo y espera a que los pods queden listos.
+
+Jenkins usa la cuenta de servicio `team1` del pod, así que no guarda ningún kubeconfig.
 
 ### Abrir la app del cluster
 Requisitos: `kubectl` y tu `team1.kubeconfig`.
@@ -99,13 +127,13 @@ Requisitos: `kubectl` y tu `team1.kubeconfig`.
     ./scripts/abrir-app.sh                         # busca ./team1.kubeconfig o ~/.kube/team1.kubeconfig
     ./scripts/abrir-app.sh ruta/al/team1.kubeconfig
 
-Luego abrir http://localhost:8080 y dejar la terminal abierta mientras se usa.
-Variables opcionales: `PORT` (8080) y `NAMESPACE` (el del kubeconfig).
+Luego abrir http://localhost:8080 y dejar la terminal abierta. Variables opcionales: `PORT` y `NAMESPACE`.
 
-> **Pendiente:** el Ingress (`mi-app.reto-ucu.net`) está creado pero todavía no enruta a la app.
-> Falta confirmar el `ingressClassName` del cluster y si ese host corresponde al equipo.
-> Cuando funcione, la app se podrá abrir desde el navegador sin kubeconfig ni `port-forward`.
+> **Pendiente:** el Ingress (`equipo1.reto-ucu.net`) está creado pero todavía no enruta a la app.
+> Falta confirmar el `ingressClassName` del cluster. Cuando funcione, la app se podrá abrir
+> desde el navegador sin kubeconfig ni `port-forward`.
 
 ## Seguridad
-- El kubeconfig es una **credencial**: no se sube al repo (`*.kubeconfig` está en `.gitignore` y `.dockerignore`) y no se comparte por canales públicos. Guardarlo fuera del proyecto, por ejemplo en `~/.kube/`.
-- El `JWT_SECRET` real se crea con `kubectl create secret` y nunca se versiona (`k8s/secret.yaml` está ignorado).
+- El kubeconfig es una **credencial**: no se sube al repo (`*.kubeconfig` está en `.gitignore`) y no se comparte por canales públicos. Guardarlo fuera del proyecto, por ejemplo en `~/.kube/`.
+- Los secretos reales (`JWT_SECRET`, `jenkins-secrets`) se crean con `kubectl create secret` y nunca se versionan.
+- El contenedor docker-in-docker de Jenkins corre con `privileged: true`; es necesario para construir imágenes dentro del cluster.

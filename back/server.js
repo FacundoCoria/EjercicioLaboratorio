@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { q, checkPassword, hoy } from './db.js';
@@ -8,7 +9,6 @@ const ESTADOS = ['disponible', 'en_uso', 'reservado', 'en_reparacion'];
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
 
 const cookieDe = (req, nombre) =>
   (req.headers.cookie || '').split(';').map((c) => c.trim().split('='))
@@ -119,4 +119,8 @@ app.get('/avisos', auth, (req, res) => {
   res.json(q.vencidas(req.user.id, req.user.rol));
 });
 
-app.listen(PORT, () => console.log(`Inventario escuchando en :${PORT}`));
+export default app;
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  app.listen(PORT, () => console.log(`Inventario (API) escuchando en :${PORT}`));
+}

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: front }
+  template:
+    metadata:
+      labels: { app: front }
+    spec:
+      containers:
+        - name: front
+          image: rperdomo4/lab-front:1.0   # el pipeline de Jenkins actualiza el tag
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet: { path: /healthz, port: 80 }
+            initialDelaySeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: 80 }
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { memory: 128Mi }
