@@ -79,7 +79,7 @@ Cambiarlos o borrarlos antes de exponer la app fuera de una demo.
 |---|---|
 | `k8s/app/back-deployment.yaml`, `back-service.yaml`, `back-pvc.yaml` | API; volumen de 1 Gi en `/data` (`Recreate`, 1 réplica) |
 | `k8s/app/front-deployment.yaml`, `front-service.yaml` | nginx con la página |
-| `k8s/app/ingress.yaml` | entrada por dominio (`equipo1.reto-ucu.net`) hacia el front |
+| `k8s/app/ingress.yaml` | entrada por dominio (`equipo1.reto-ucu.net`, clase `apisix`) hacia el front |
 | `k8s/jenkins/*` | Jenkins con un contenedor docker-in-docker, volumen de 2 Gi y su configuración |
 | `k8s/secret.yaml.example`, `k8s/jenkins-secrets.yaml.example` | plantillas de secretos (los reales no se versionan) |
 
@@ -129,9 +129,11 @@ Requisitos: `kubectl` y tu `team1.kubeconfig`.
 
 Luego abrir http://localhost:8080 y dejar la terminal abierta. Variables opcionales: `PORT` y `NAMESPACE`.
 
-> **Pendiente:** el Ingress (`equipo1.reto-ucu.net`) está creado pero todavía no enruta a la app.
-> Falta confirmar el `ingressClassName` del cluster. Cuando funcione, la app se podrá abrir
-> desde el navegador sin kubeconfig ni `port-forward`.
+### Acceso por dominio
+El Ingress (`ingressClassName: apisix`) publica la app en **https://equipo1.reto-ucu.net**, sin kubeconfig ni `port-forward`.
+
+> El certificado del cluster es un comodín (`*.reto-ucu.net`) administrado por la cátedra. Si está vencido, el navegador
+> mostrará una advertencia de seguridad; no es un problema de este proyecto y se arregla renovando ese certificado.
 
 ## Seguridad
 - El kubeconfig es una **credencial**: no se sube al repo (`*.kubeconfig` está en `.gitignore`) y no se comparte por canales públicos. Guardarlo fuera del proyecto, por ejemplo en `~/.kube/`.
