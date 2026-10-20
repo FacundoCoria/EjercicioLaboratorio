@@ -4,7 +4,7 @@ metadata:
   name: lab-inventario
 spec:
   rules:
-    - host: inventario.ejemplo.com   # cambiar por tu dominio
+    - host: mi-app.reto-ucu.net
       http:
         paths:
           - path: /
