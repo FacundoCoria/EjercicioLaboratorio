@@ -24,4 +24,4 @@ PORT="${PORT:-8080}"
 
 echo "Namespace: $NS"
 echo "App en:    http://localhost:$PORT   (Ctrl+C para cerrar)"
-exec kubectl --kubeconfig "$KC" port-forward -n "$NS" svc/lab-inventario "$PORT:80"
+exec kubectl --kubeconfig "$KC" port-forward -n "$NS" "svc/${SVC:-front}" "$PORT:${SVC_PORT:-80}"

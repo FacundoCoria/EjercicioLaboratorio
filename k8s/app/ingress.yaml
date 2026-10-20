@@ -4,12 +4,12 @@ metadata:
   name: lab-inventario
 spec:
   rules:
-    - host: mi-app.reto-ucu.net
+    - host: equipo1.reto-ucu.net
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: lab-inventario
+                name: front
                 port: { number: 80 }

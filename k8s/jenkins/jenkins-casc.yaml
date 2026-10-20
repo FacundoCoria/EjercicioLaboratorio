@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-casc
+data:
+  casc.yaml: |
+    jenkins:
+      systemMessage: "Jenkins - Inventario del laboratorio"
+      numExecutors: 2
+      securityRealm:
+        local:
+          allowsSignup: false
+          users:
+            - id: "${JENKINS_ADMIN_USER}"
+              password: "${JENKINS_ADMIN_PASSWORD}"
+      authorizationStrategy:
+        loggedInUsersCanDoAnything:
+          allowAnonymousRead: false
+    credentials:
+      system:
+        domainCredentials:
+          - credentials:
+              - usernamePassword:
+                  scope: GLOBAL
+                  id: dockerhub
+                  description: Docker Hub
+                  username: "${DOCKERHUB_USER}"
+                  password: "${DOCKERHUB_TOKEN}"
+    jobs:
+      - script: >
+          pipelineJob('lab-inventario') {
+            triggers { scm('H/2 * * * *') }
+            definition {
+              cpsScm {
+                scm {
+                  git {
+                    remote { url('https://github.com/FacundoCoria/EjercicioLaboratorio.git') }
+                    branches('*/main')
+                  }
+                }
+                scriptPath('Jenkinsfile')
+              }
+            }
+          }

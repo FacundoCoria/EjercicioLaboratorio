@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate        # el PVC es ReadWriteOnce
+  selector:
+    matchLabels: { app: jenkins }
+  template:
+    metadata:
+      labels: { app: jenkins }
+    spec:
+      serviceAccountName: team1   # permite a Jenkins usar kubectl dentro del namespace
+      containers:
+        - name: jenkins
+          image: rperdomo4/lab-jenkins:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - { name: DOCKER_HOST, value: "tcp://localhost:2375" }
+            - { name: CASC_JENKINS_CONFIG, value: /var/jenkins_casc/casc.yaml }
+            - { name: JAVA_OPTS, value: "-Djenkins.install.runSetupWizard=false -Xmx768m" }
+          envFrom:
+            - secretRef: { name: jenkins-secrets }
+          volumeMounts:
+            - { name: jenkins-home, mountPath: /var/jenkins_home }
+            - { name: casc, mountPath: /var/jenkins_casc }
+          readinessProbe:
+            httpGet: { path: /login, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /login, port: 8080 }
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            requests: { cpu: 250m, memory: 768Mi }
+            limits: { cpu: "1", memory: 1536Mi }
+        - name: dind             # daemon de Docker para construir imágenes
+          image: docker:27-dind
+          securityContext:
+            privileged: true
+          env:
+            - { name: DOCKER_TLS_CERTDIR, value: "" }
+          volumeMounts:
+            - { name: docker-graph, mountPath: /var/lib/docker }
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+      volumes:
+        - name: jenkins-home
+          persistentVolumeClaim: { claimName: jenkins-home }
+        - name: casc
+          configMap: { name: jenkins-casc }
+        - name: docker-graph
+          emptyDir: {}
