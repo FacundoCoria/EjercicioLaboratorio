@@ -3,5 +3,5 @@ git
 credentials-binding
 configuration-as-code
 job-dsl
-timestamps
+timestamper
 pipeline-stage-view
