@@ -36,8 +36,13 @@ Tres piezas, cada una en su propio pod:
     ├── Jenkinsfile  # pipeline
     └── docker-compose.yml
 
+> Nota
+> Ver manifiestos k8s.
+
+![Arquitectura Clúster](Proyecto4-Lab.drawio.png)
+
 El front sirve la página y reenvía a `http://back:3000` las rutas de la API (`/login`, `/logout`, `/me`, `/equipos`, `/avisos`, `/health`).
-La base es SQLite (`node:sqlite`, Node 24+), por eso el back es de **una sola réplica**.
+La base es SQLite (`node:sqlite`, Node 24+), por eso el back es de **una sola réplica**. SQLite es una base de datos enmbebida; se llama en el mismo proceso que el back.
 
 ### API
 | Método | Ruta | Quién |
@@ -91,6 +96,13 @@ Se pierde si se borra el PVC o el namespace, o si cae el nodo (el almacenamiento
 Para varias réplicas del back habría que migrar `back/db.js` a Postgres.
 
 ### Puesta en marcha de Jenkins (una sola vez)
+
+> Nota
+> Jenkins es el encargado de desplegar la app al Clúster de la UCU al momento de hacer push a la rama main.
+
+> Nota
+> Usar los comandos en Git Bash.
+
 Requiere `kubectl`, tu `team1.kubeconfig` y una sesión de `docker login`.
 
     # 1. Imagen de Jenkins
@@ -109,7 +121,7 @@ Requiere `kubectl`, tu `team1.kubeconfig` y una sesión de `docker login`.
     # 3. Desplegar Jenkins
     kubectl apply -n alumno-team1 -f k8s/jenkins/
 
-    # 4. Abrirlo en http://localhost:8081
+    # 4. Abrir Jenkins en http://localhost:8081
     ./scripts/abrir-jenkins.sh
 
 ### Pipeline (`Jenkinsfile`)
@@ -121,13 +133,18 @@ Jenkins revisa el repo (rama `main`) cada pocos minutos y ejecuta:
 
 Jenkins usa la cuenta de servicio `team1` del pod, así que no guarda ningún kubeconfig.
 
-### Abrir la app del cluster
-Requisitos: `kubectl` y tu `team1.kubeconfig`.
+### Para conseguir el usuario y contraseña para Jenkins
 
-    ./scripts/abrir-app.sh                         # busca ./team1.kubeconfig o ~/.kube/team1.kubeconfig
-    ./scripts/abrir-app.sh ruta/al/team1.kubeconfig
+> Nota
+> Usar los comandos en Git Bash.
 
-Luego abrir http://localhost:8080 y dejar la terminal abierta. Variables opcionales: `PORT` y `NAMESPACE`.
+    export KUBECONFIG=/ruta/al/team1.kubeconfig
+    kubectl get secret jenkins-secrets -n alumno-team1 -o jsonpath='{.data.JENKINS_ADMIN_USER}' | base64 -d
+    kubectl get secret jenkins-secrets -n alumno-team1 -o jsonpath='{.data.JENKINS_ADMIN_PASSWORD}' | base64 -d
+
+    # Abrir Jenkins en http://localhost:8081
+    ./scripts/abrir-jenkins.sh
+
 
 ### Acceso por dominio
 El Ingress (`ingressClassName: apisix`) publica la app en **https://equipo1.reto-ucu.net**, sin kubeconfig ni `port-forward`.
