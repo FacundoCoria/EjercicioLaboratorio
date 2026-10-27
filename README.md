@@ -139,3 +139,25 @@ El Ingress (`ingressClassName: apisix`) publica la app en **https://equipo1.reto
 - El kubeconfig es una **credencial**: no se sube al repo (`*.kubeconfig` está en `.gitignore`) y no se comparte por canales públicos. Guardarlo fuera del proyecto, por ejemplo en `~/.kube/`.
 - Los secretos reales (`JWT_SECRET`, `jenkins-secrets`) se crean con `kubectl create secret` y nunca se versionan.
 - El contenedor docker-in-docker de Jenkins corre con `privileged: true`; es necesario para construir imágenes dentro del cluster.
+
+## Documento de arquitectura: Sistema de Inventario del Laboratorio
+## 1. Descripción general
+El sistema de Inventario del Laboratorio permite gestionar los equipos disponibles, consultar su ubicación y estado, registrar su utilización y devolución, y administrar reservas. Además, proporciona un historial de movimientos y avisos sobre reservas vencidas.
+
+La aplicación contempla dos roles: usuario, que puede consultar y utilizar equipos, y encargado, que también puede registrar equipos y modificar sus estados.
+## 2. Arquitectura del sistema
+Se utiliza una arquitectura monolítica, implementada como un único servicio con Node.js y Express. El frontend estático, desarrollado con HTML y JavaScript, se comunica con el servidor mediante una API REST.
+
+El servidor centraliza la autenticación, la autorización por roles y las reglas de negocio. Los datos se almacenan en SQLite, mediante un módulo específico que concentra las consultas y la gestión de las tablas.
+
+## 3. Seguridad y reglas de negocio
+La autenticación se realiza mediante JWT almacenado en una cookie. Las rutas protegidas requieren una sesión válida, y las operaciones administrativas están limitadas al rol encargado.
+
+El servidor valida las reglas principales: impedir reservas de equipos en uso o en reparación, evitar reservas duplicadas para una misma fecha y equipo, y restringir las devoluciones al usuario que tomó el equipo o al encargado. También controla las reservas del día y genera avisos de vencimiento.
+
+## 4. Despliegue y persistencia
+La aplicación se empaqueta mediante Docker y se despliega en Kubernetes. Se utiliza un Deployment con una réplica, un Service para el acceso interno y un PersistentVolumeClaim (PVC) montado en /data, donde reside el archivo SQLite.
+
+El volumen permite conservar los datos al reiniciar o reemplazar el pod. Sin embargo, al utilizar almacenamiento local al nodo, no se garantiza la recuperación ante la pérdida de dicho nodo. La configuración de una sola réplica evita que varias instancias escriban simultáneamente sobre el mismo archivo SQLite. Si se necesitara escalar horizontalmente, sería conveniente migrar a PostgreSQL.
+
+El endpoint /health permite verificar el estado básico de la aplicación y utilizar comprobaciones de salud en Kubernetes. El acceso externo mediante Ingress queda sujeto a completar su configuración y verificar el dominio y la clase de Ingress del clúster.
