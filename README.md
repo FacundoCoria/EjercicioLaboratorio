@@ -178,3 +178,4 @@ La aplicación se empaqueta mediante Docker y se despliega en Kubernetes. Se uti
 El volumen permite conservar los datos al reiniciar o reemplazar el pod. Sin embargo, al utilizar almacenamiento local al nodo, no se garantiza la recuperación ante la pérdida de dicho nodo. La configuración de una sola réplica evita que varias instancias escriban simultáneamente sobre el mismo archivo SQLite. Si se necesitara escalar horizontalmente, sería conveniente migrar a PostgreSQL.
 
 El endpoint /health permite verificar el estado básico de la aplicación y utilizar comprobaciones de salud en Kubernetes. El acceso externo mediante Ingress queda sujeto a completar su configuración y verificar el dominio y la clase de Ingress del clúster.
+
